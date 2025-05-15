@@ -1,0 +1,12 @@
+{
+  "transformers": [
+    {
+      "transformerName": "markdown",
+      "supportedSourceAndTargetList": [
+        {"sourceMediaType": "application/pdf", "targetMediaType": "text/markdown"}
+      ],
+      "transformOptions": [
+      ]
+    }
+  ]
+}

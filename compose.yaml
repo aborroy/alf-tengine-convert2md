@@ -1,0 +1,15 @@
+services:
+  transform-md:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
