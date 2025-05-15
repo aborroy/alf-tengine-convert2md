@@ -53,7 +53,7 @@ java -jar target/alf-tengine-convert2md-0.8.0.jar
 
 The app listens on `:8090` by default.
 
-## 🔧 Configuration
+## Configuration
 
 | Property                                    | Default                  | Purpose                          |
 | ------------------------------------------- | ------------------------ | -------------------------------- |
