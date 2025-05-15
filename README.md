@@ -66,6 +66,95 @@ The app listens on `:8090` by default.
 
 Edit `src/main/resources/application.yml` or supply env vars/`‑D` flags.
 
+### Testing with the HTML Interface
+
+After starting the service, open the test application at [http://localhost:8090](http://localhost:8090). Use the following input values:
+
+- **file**: Upload an PDF file
+- **sourceMimetype**: `application/pdf`
+- **targetMimetype**: `text/markdown`
+
+Click the **Transform** button to process the PDF file, the extracted metadata will be returned as a Markdown file
+
+## Building the Docker Image
+
+### Requirements
+
+- Docker 4.30+
+
+### Building the Image
+
+From the project root directory, build the Docker image with:
+
+```bash
+docker build . -t alf-tengine-convert2md
+```
+
+This will create a Docker image named `alf-tengine-convert2md:latest` in your local Docker repository
+
+## Deploying with Alfresco Community 25.x
+
+Ensure your `compose.yaml` file includes the following configuration:
+
+```yaml
+services:
+  alfresco:
+    environment:
+      JAVA_OPTS : >-
+        -DlocalTransform.core-aio.url=http://transform-core-aio:8090/
+        -DlocalTransform.md.url=http://transform-md:8090/
+
+  transform-core-aio:
+    image: alfresco/alfresco-transform-core-aio:5.1.7
+
+  transform-md:
+    image: alf-tengine-convert2md
+```
+
+Key Configuration Updates
+
+- Add `localTransform.md.url` to the Alfresco service (`http://transform-md:8090/` by default)
+- Define the `transform-md` service using the custom-built image
+
+*Ensure you have built the Docker image (`alf-tengine-convert2md`) before running Docker Compose*
+
+## Deploying with Alfresco Enterprise 25.x
+
+Ensure your `compose.yaml` file includes the following configuration:
+
+```yaml
+services:
+  alfresco:
+    environment:
+      JAVA_OPTS : >-
+        -Dtransform.service.enabled=true
+        -Dtransform.service.url=http://transform-router:8095
+        -Dsfs.url=http://shared-file-store:8099/
+
+  transform-router:
+    image: quay.io/alfresco/alfresco-transform-router:4.1.7
+    environment:
+      CORE_AIO_URL: "http://transform-core-aio:8090"
+      TRANSFORMER_URL_MD: "http://transform-md:8090"
+      TRANSFORMER_QUEUE_MD: "markdown-engine-queue"
+
+  transform-md:
+    image: alf-tengine-convert2md
+    environment:
+      ACTIVEMQ_URL: "nio://activemq:61616"
+      FILE_STORE_URL: >-
+        http://shared-file-store:8099/alfresco/api/-default-/private/sfs/versions/1/file
+```
+
+Key Configuration Updates
+
+- Register the Markdown transformer with `transform-router`
+    - URL: `http://transform-md:8090/` (default)
+    - Queue Name: `markdown-engine-queue` (defined in `application.yaml`)
+- Define the `transform-md` service and link it to ActiveMQ and Shared File Store services
+
+*Ensure you have built the Docker image (`alf-tengine-convert2md`) before running Docker Compose*
+
 ## Internals
 
 ```mermaid
