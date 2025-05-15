@@ -1,4 +1,7 @@
 # alf-tengine-convert2md
+[![Build](https://img.shields.io/badge/build-Maven_3.9+-blue?logo=apachemaven)](pom.xml)
+[![Docker Compose](https://img.shields.io/badge/run-docker--compose-blue?logo=docker)](compose.yaml)
+[![License](https://img.shields.io/github/license/aborroy/alf-tengine-convert2md)](LICENSE)
 
 AI‑powered Alfresco Transform Engine that converts PDF files to clean, richly‑described Markdown.
 
