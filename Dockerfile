@@ -27,7 +27,10 @@ RUN pip install --no-cache-dir docling \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
-COPY --from=build /workspace/target/*.jar app.jar
+COPY --from=build /workspace/target/*.jar /app/app.jar
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
