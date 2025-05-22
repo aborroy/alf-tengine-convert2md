@@ -108,7 +108,7 @@ services:
     image: alfresco/alfresco-transform-core-aio:5.1.7
 
   transform-md:
-    image: alf-tengine-convert2md
+    image: docker.io/angelborroy/alf-tengine-convert2md
 ```
 
 Key Configuration Updates
@@ -139,7 +139,7 @@ services:
       TRANSFORMER_QUEUE_MD: "markdown-engine-queue"
 
   transform-md:
-    image: alf-tengine-convert2md
+    image: docker.io/angelborroy/alf-tengine-convert2md
     environment:
       ACTIVEMQ_URL: "nio://activemq:61616"
       FILE_STORE_URL: >-
@@ -172,3 +172,41 @@ graph TD
 
     * Parses PDF with [Docling](https://pypi.org/project/docling/)
     * Describes embedded images via Spring AI using Ollama `llava`
+
+---
+
+## Build and Publish to Your Docker Registry
+
+The image `docker.io/angelborroy/alf-tengine-convert2md` is already available on Docker Hub.
+
+If you want to build and publish your own version of the image (e.g., to your own Docker Hub account or private registry), follow these steps:
+
+### Enable Buildx (if not already enabled)
+
+```bash
+docker buildx create --name multiarch-builder --use
+docker buildx inspect --bootstrap
+```
+
+### Build and Push Multi-Arch Image
+
+Replace `yourdockeruser` with your Docker Hub username or private registry path:
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  --tag yourdockeruser/alf-tengine-convert2md:latest \
+  --push .
+```
+
+This command:
+
+* Builds the image for both `amd64` and `arm64` architectures.
+* Tags it as `yourdockeruser/alf-tengine-convert2md:latest`.
+* Pushes it to your specified registry.
+
+> Make sure you're logged into your Docker registry before pushing:
+
+```bash
+docker login
+```
