@@ -193,8 +193,9 @@ docker buildx inspect --bootstrap
 Replace `yourdockeruser` with your Docker Hub username or private registry path:
 
 ```bash
-docker buildx build \
+docker buildx build --no-cache \
   --platform linux/amd64,linux/arm64 \
+  --attest type=sbom --attest type=provenance,mode=max \
   --tag yourdockeruser/alf-tengine-convert2md:latest \
   --push .
 ```
