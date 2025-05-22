@@ -15,6 +15,8 @@ AI‑powered Alfresco Transform Engine that converts PDF files to clean, richly�
 | Containerised   | Multi‑stage Docker build (Java 17 + Python 3.11) with health‑check                                                            |
 | Configurable    | All knobs live in `application.yml` or environment variables                                                                  |
 
+> Review also a similar project available in https://github.com/becpg/becpg-transform-markdown
+
 ## Quick start
 
 ### 1. Prerequisites
