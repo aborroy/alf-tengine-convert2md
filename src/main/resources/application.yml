@@ -19,3 +19,5 @@ queue:
 transform:
   core:
     version: 5.1.7
+  language:
+    default: english    # Accepted languages: english, spanish, french, german, italian, portuguese

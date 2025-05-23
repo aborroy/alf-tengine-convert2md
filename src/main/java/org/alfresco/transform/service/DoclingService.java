@@ -1,6 +1,5 @@
 package org.alfresco.transform.service;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -27,7 +26,7 @@ public class DoclingService {
 
     private final ChatModel chatModel;
 
-    public String convert(File file) throws IOException, InterruptedException {
+    public String convert(File file, String targetLanguage) throws IOException, InterruptedException {
         Path workDir = Files.createTempDirectory("docling");
 
         // Sanitize the filename
@@ -61,10 +60,10 @@ public class DoclingService {
         Path md = workDir.resolve(safeFilename.replaceFirst("\\.pdf$", ".md"));
         String originalMarkdown = Files.readString(md, StandardCharsets.UTF_8);
 
-        return replaceImagesWithDescriptions(originalMarkdown, UUID.randomUUID().toString(), safeFilename);
+        return replaceImagesWithDescriptions(originalMarkdown, UUID.randomUUID().toString(), safeFilename, targetLanguage);
     }
 
-    private String replaceImagesWithDescriptions(String markdown, String uuid, String filename) {
+    private String replaceImagesWithDescriptions(String markdown, String uuid, String filename, String language) {
         StringBuilder newMarkdown = new StringBuilder();
         Pattern imgPattern = Pattern.compile("!\\[([^\\]]*)\\]\\((data:image/[^;]+;base64,([^)]*))\\)");
         Matcher matcher = imgPattern.matcher(markdown);
@@ -85,13 +84,14 @@ public class DoclingService {
             }
 
             String context = "Document: " + filename + ", altText: " + altText;
-            String description = describeImage(imageBytes, index + 1, context);
+            String description = describeImage(imageBytes, index + 1, context, language);
 
             // Append text up to the image
             newMarkdown.append(markdown, lastEnd, matcher.start());
 
             // Replace image with description text
-            newMarkdown.append("**[Image Description ").append(index + 1).append("]**\n");
+            String descriptionLabel = getDescriptionLabel(language, index + 1);
+            newMarkdown.append(descriptionLabel).append("\n");
             newMarkdown.append(description).append("\n\n");
 
             lastEnd = matcher.end();
@@ -104,9 +104,20 @@ public class DoclingService {
         return newMarkdown.toString();
     }
 
-    private String describeImage(byte[] imageBytes, int pageNumber, String context) {
+    private String getDescriptionLabel(String language, int imageNumber) {
+        return switch (language.toLowerCase()) {
+            case "spanish" -> "**[Descripción de Imagen " + imageNumber + "]**";
+            case "french" -> "**[Description d'Image " + imageNumber + "]**";
+            case "german" -> "**[Bildbeschreibung " + imageNumber + "]**";
+            case "italian" -> "**[Descrizione Immagine " + imageNumber + "]**";
+            case "portuguese" -> "**[Descrição da Imagem " + imageNumber + "]**";
+            default -> "**[Image Description " + imageNumber + "]**";
+        };
+    }
+
+    private String describeImage(byte[] imageBytes, int pageNumber, String context, String language) {
         try {
-            String prompt = buildPrompt(pageNumber, context);
+            String prompt = buildPrompt(pageNumber, context, language);
 
             String result = ChatClient.create(chatModel)
                     .prompt()
@@ -116,20 +127,73 @@ public class DoclingService {
                     .content();
 
             return (result == null || result.isBlank())
-                    ? "Image on page " + pageNumber + " of the document."
+                    ? getDefaultImageText(pageNumber, language)
                     : result;
 
         } catch (Exception e) {
             log.warn("LLM image description failed on page {}: {}", pageNumber, e.getMessage());
-            return "Image on page " + pageNumber + " of the document.";
+            return getDefaultImageText(pageNumber, language);
         }
     }
 
-    private String buildPrompt(int pageNumber, String context) {
-        return "You are analyzing an image from page " + pageNumber + " of a PDF document. " +
-                "Provide a detailed description of what you see: subject, visual elements, visible text, charts, or diagrams. " +
-                (context.isBlank() ? "" : "This image appears with the following context: \"" + context + "\". ") +
-                "Your description should be 2–3 sentences, concise but informative, useful for future search or summarization.";
+    private String getDefaultImageText(int pageNumber, String language) {
+        return switch (language.toLowerCase()) {
+            case "spanish" -> "Imagen en la página " + pageNumber + " del documento.";
+            case "french" -> "Image à la page " + pageNumber + " du document.";
+            case "german" -> "Bild auf Seite " + pageNumber + " des Dokuments.";
+            case "italian" -> "Immagine a pagina " + pageNumber + " del documento.";
+            case "portuguese" -> "Imagem na página " + pageNumber + " do documento.";
+            default -> "Image on page " + pageNumber + " of the document.";
+        };
     }
 
+    private String buildPrompt(int pageNumber, String context, String language) {
+        String basePrompt = getLocalizedPrompt(language, pageNumber);
+
+        if (!context.isBlank()) {
+            String contextPrompt = getContextPrompt(language, context);
+            basePrompt += " " + contextPrompt;
+        }
+
+        return basePrompt + " " + getInstructionPrompt(language);
+    }
+
+    private String getLocalizedPrompt(String language, int pageNumber) {
+        return switch (language.toLowerCase()) {
+            case "spanish" -> "Estás analizando una imagen de la página " + pageNumber + " de un documento PDF. " +
+                    "Proporciona una descripción detallada de lo que ves: sujeto, elementos visuales, texto visible, gráficos o diagramas.";
+            case "french" -> "Vous analysez une image de la page " + pageNumber + " d'un document PDF. " +
+                    "Fournissez une description détaillée de ce que vous voyez : sujet, éléments visuels, texte visible, graphiques ou diagrammes.";
+            case "german" -> "Sie analysieren ein Bild von Seite " + pageNumber + " eines PDF-Dokuments. " +
+                    "Geben Sie eine detaillierte Beschreibung dessen, was Sie sehen: Thema, visuelle Elemente, sichtbarer Text, Diagramme oder Grafiken.";
+            case "italian" -> "Stai analizzando un'immagine dalla pagina " + pageNumber + " di un documento PDF. " +
+                    "Fornisci una descrizione dettagliata di ciò che vedi: soggetto, elementi visivi, testo visibile, grafici o diagrammi.";
+            case "portuguese" -> "Você está analisando uma imagem da página " + pageNumber + " de um documento PDF. " +
+                    "Forneça uma descrição detalhada do que você vê: assunto, elementos visuais, texto visível, gráficos ou diagramas.";
+            default -> "You are analyzing an image from page " + pageNumber + " of a PDF document. " +
+                    "Provide a detailed description of what you see: subject, visual elements, visible text, charts, or diagrams.";
+        };
+    }
+
+    private String getContextPrompt(String language, String context) {
+        return switch (language.toLowerCase()) {
+            case "spanish" -> "Esta imagen aparece con el siguiente contexto: \"" + context + "\".";
+            case "french" -> "Cette image apparaît avec le contexte suivant : \"" + context + "\".";
+            case "german" -> "Dieses Bild erscheint mit folgendem Kontext: \"" + context + "\".";
+            case "italian" -> "Questa immagine appare con il seguente contesto: \"" + context + "\".";
+            case "portuguese" -> "Esta imagem aparece com o seguinte contexto: \"" + context + "\".";
+            default -> "This image appears with the following context: \"" + context + "\".";
+        };
+    }
+
+    private String getInstructionPrompt(String language) {
+        return switch (language.toLowerCase()) {
+            case "spanish" -> "Tu descripción debe tener 2-3 oraciones, concisa pero informativa, útil para búsquedas futuras o resúmenes.";
+            case "french" -> "Votre description doit comporter 2-3 phrases, concise mais informative, utile pour les recherches futures ou les résumés.";
+            case "german" -> "Ihre Beschreibung sollte 2-3 Sätze umfassen, prägnant aber informativ, nützlich für zukünftige Suchen oder Zusammenfassungen.";
+            case "italian" -> "La tua descrizione dovrebbe essere di 2-3 frasi, concisa ma informativa, utile per ricerche future o riassunti.";
+            case "portuguese" -> "Sua descrição deve ter 2-3 frases, concisa mas informativa, útil para buscas futuras ou resumos.";
+            default -> "Your description should be 2–3 sentences, concise but informative, useful for future search or summarization.";
+        };
+    }
 }

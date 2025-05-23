@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.alfresco.transform.service.DoclingService;
 import org.alfresco.transform.base.CustomTransformer;
 import org.alfresco.transform.base.TransformManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -19,6 +20,9 @@ public class MarkdownTransformer implements CustomTransformer {
 
     private final DoclingService doclingService;
 
+    @Value("${transform.language.default")
+    String defaultLanguage;
+
     @Override
     public String getTransformerName() {
         return "markdown";
@@ -32,23 +36,18 @@ public class MarkdownTransformer implements CustomTransformer {
                           Map<String, String> transformOptions,
                           TransformManager transformManager) throws Exception {
 
-        // Create a temporary file
         File tempFile = File.createTempFile("input-", ".pdf");
 
-        // Copy the InputStream to the temporary file
         try (OutputStream tempOut = new FileOutputStream(tempFile)) {
             inputStream.transferTo(tempOut);
         }
 
         try {
-            // Call the File-based convert method
-            String markdown = doclingService.convert(tempFile);
-
-            // Write the result to the output stream
+            String markdown = doclingService.convert(tempFile,
+                    transformOptions.getOrDefault("language", defaultLanguage));
             outputStream.write(markdown.getBytes(StandardCharsets.UTF_8));
         } finally {
-            // Always delete the temp file
-            tempFile.delete();
+            tempFile.deleteOnExit();
         }
     }
 

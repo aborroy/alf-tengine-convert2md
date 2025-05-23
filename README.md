@@ -49,6 +49,17 @@ curl -X POST \
      -o output.md
 ```
 
+Optionally, language for image descriptions can be specified as a `language` parameter:
+
+```bash
+curl -X POST \
+     -F "file=@/path/to/document.pdf" \
+     "http://localhost:8090/transform?sourceMimetype=application/pdf&targetMimetype=text/markdown&language=spanish" \
+     -o output.md
+```
+
+> Accepted languages: english, spanish, french, german, italian, portuguese
+
 ### 3. Build & run locally
 
 ```bash
@@ -60,11 +71,12 @@ The app listens on `:8090` by default.
 
 ## Configuration
 
-| Property                                    | Default                  | Purpose                          |
-| ------------------------------------------- | ------------------------ | -------------------------------- |
-| `SPRING_AI_OLLAMA_BASE_URL`                 | `http://localhost:11434` | Endpoint for the Ollama REST API |
-| `spring.servlet.multipart.max-file-size`    | `100MB`                  | Max upload size                  |
-| `spring.servlet.multipart.max-request-size` | `100MB`                  | Max request size                 |
+| Property                                   | Default                  | Purpose                           |
+|--------------------------------------------|--------------------------|-----------------------------------|
+| `SPRING_AI_OLLAMA_BASE_URL`                | `http://localhost:11434` | Endpoint for the Ollama REST API  |
+| `spring.servlet.multipart.max-file-size`   | `100MB`                  | Max upload size                   |
+| `spring.servlet.multipart.max-request-size`| `100MB`                  | Max request size                  |
+| `transform.language.default`               | `english`                | Default language for descriptions |
 
 Edit `src/main/resources/application.yml` or supply env vars/`‑D` flags.
 
@@ -75,6 +87,7 @@ After starting the service, open the test application at [http://localhost:8090]
 - **file**: Upload an PDF file
 - **sourceMimetype**: `application/pdf`
 - **targetMimetype**: `text/markdown`
+- **language**: `english` (don't set a value to this parameter for using default language)
 
 Click the **Transform** button to process the PDF file, the extracted metadata will be returned as a Markdown file
 

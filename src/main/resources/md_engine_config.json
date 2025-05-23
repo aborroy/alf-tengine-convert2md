@@ -1,12 +1,16 @@
 {
+  "transformOptions": {
+    "languageOptions": [
+      { "value": {"name": "language"} }
+    ]
+  },
   "transformers": [
     {
       "transformerName": "markdown",
       "supportedSourceAndTargetList": [
         {"sourceMediaType": "application/pdf", "targetMediaType": "text/markdown"}
       ],
-      "transformOptions": [
-      ]
+      "transformOptions": [ "languageOptions" ]
     }
   ]
 }
