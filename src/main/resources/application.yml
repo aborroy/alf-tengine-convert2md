@@ -21,3 +21,11 @@ transform:
     version: 5.1.7
   language:
     default: english    # Accepted languages: english, spanish, french, german, italian, portuguese
+  image:
+    default: placeholder # Accepted options: placeholder, embedded, referenced, described
+
+# Image options:
+# * placeholder: only the position of the image is marked in the output
+# * embedded: the image is embedded as base64 encoded string
+# * referenced: the image is exported in PNG format and referenced from the main exported document
+# * described: the image description is embedded in the position of the image. This is not a native Docling option.

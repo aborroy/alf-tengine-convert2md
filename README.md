@@ -49,12 +49,28 @@ curl -X POST \
      -o output.md
 ```
 
-Optionally, language for image descriptions can be specified as a `language` parameter:
+Optionally, mode for image embeddings can be specified as an `image` parameter:
 
 ```bash
 curl -X POST \
      -F "file=@/path/to/document.pdf" \
-     "http://localhost:8090/transform?sourceMimetype=application/pdf&targetMimetype=text/markdown&language=spanish" \
+     "http://localhost:8090/transform?sourceMimetype=application/pdf&targetMimetype=text/markdown&image=described" \
+     -o output.md
+```
+
+Accepted values for `image` parameter:
+
+* `placeholder`: only the position of the image is marked in the output
+* `embedded`: the image is embedded as base64 encoded string
+* `referenced`: the image is exported in PNG format and referenced from the main exported document
+* `described`: the image description is embedded in the position of the image. This is not a native Docling option.
+
+When using `described` for image mode, language for the descriptions can be specified as a `language` parameter:
+
+```bash
+curl -X POST \
+     -F "file=@/path/to/document.pdf" \
+     "http://localhost:8090/transform?sourceMimetype=application/pdf&targetMimetype=text/markdown&image=described&language=spanish" \
      -o output.md
 ```
 
@@ -84,9 +100,10 @@ Edit `src/main/resources/application.yml` or supply env vars/`‑D` flags.
 
 After starting the service, open the test application at [http://localhost:8090](http://localhost:8090). Use the following input values:
 
-- **file**: Upload an PDF file
+- **file**: Upload a PDF file
 - **sourceMimetype**: `application/pdf`
 - **targetMimetype**: `text/markdown`
+- **image**: `placeholder` (don't set a value to this parameter for using default image mode)
 - **language**: `english` (don't set a value to this parameter for using default language)
 
 Click the **Transform** button to process the PDF file, the extracted metadata will be returned as a Markdown file

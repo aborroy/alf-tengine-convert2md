@@ -1,7 +1,8 @@
 {
   "transformOptions": {
     "languageOptions": [
-      { "value": {"name": "language"} }
+      { "value": {"name": "language"} },
+      { "value": {"name":  "image"} }
     ]
   },
   "transformers": [

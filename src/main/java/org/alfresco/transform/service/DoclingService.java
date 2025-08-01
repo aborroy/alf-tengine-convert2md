@@ -24,13 +24,16 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DoclingService {
 
+    public static final String IMAGE_MODE_DESCRIBED = "described";
+    public static final String IMAGE_MODE_EMBEDDED = "embedded";
+
     private final ChatModel chatModel;
 
-    public String convert(File file, String targetLanguage) throws IOException, InterruptedException {
+    public String convert(File file, String targetLanguage, String imageMode) throws IOException, InterruptedException {
         Path workDir = Files.createTempDirectory("docling");
 
         // Sanitize the filename
-        String safeFilename = Optional.ofNullable(file.getName())
+        String safeFilename = Optional.of(file.getName())
                 .map(name -> name.replaceAll("[^a-zA-Z0-9\\.\\-]", "_"))
                 .orElse("input.pdf");
 
@@ -38,11 +41,14 @@ public class DoclingService {
         Path pdf = workDir.resolve(safeFilename);
         Files.copy(file.toPath(), pdf, StandardCopyOption.REPLACE_EXISTING);
 
+        // Image mode
+        String imageModeParam = IMAGE_MODE_DESCRIBED.equalsIgnoreCase(imageMode) ? IMAGE_MODE_EMBEDDED : imageMode.toLowerCase();
+
         // Build and start the Docling process
         ProcessBuilder pb = new ProcessBuilder(
                 "docling",
                 "--to", "md",
-                "--image-export-mode", "embedded",
+                "--image-export-mode", imageModeParam,
                 "--output", workDir.toString(),
                 pdf.toString()
         );
@@ -60,7 +66,11 @@ public class DoclingService {
         Path md = workDir.resolve(safeFilename.replaceFirst("\\.pdf$", ".md"));
         String originalMarkdown = Files.readString(md, StandardCharsets.UTF_8);
 
-        return replaceImagesWithDescriptions(originalMarkdown, UUID.randomUUID().toString(), safeFilename, targetLanguage);
+        if (imageMode.equalsIgnoreCase(IMAGE_MODE_DESCRIBED)) {
+            return replaceImagesWithDescriptions(originalMarkdown, UUID.randomUUID().toString(), safeFilename, targetLanguage);
+        } else {
+            return originalMarkdown;
+        }
     }
 
     private String replaceImagesWithDescriptions(String markdown, String uuid, String filename, String language) {

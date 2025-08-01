@@ -20,8 +20,11 @@ public class MarkdownTransformer implements CustomTransformer {
 
     private final DoclingService doclingService;
 
-    @Value("${transform.language.default")
+    @Value("${transform.language.default}")
     String defaultLanguage;
+
+    @Value("${transform.image.default}")
+    String defaultImage;
 
     @Override
     public String getTransformerName() {
@@ -44,7 +47,8 @@ public class MarkdownTransformer implements CustomTransformer {
 
         try {
             String markdown = doclingService.convert(tempFile,
-                    transformOptions.getOrDefault("language", defaultLanguage));
+                    transformOptions.getOrDefault("language", defaultLanguage),
+                    transformOptions.getOrDefault("image", defaultImage));
             outputStream.write(markdown.getBytes(StandardCharsets.UTF_8));
         } finally {
             tempFile.deleteOnExit();
