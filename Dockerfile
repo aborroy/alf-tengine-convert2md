@@ -15,7 +15,7 @@ FROM python:3-slim
 # --- Install system dependencies ---
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        openjdk-17-jre-headless \
+        openjdk-21-jre-headless \
         poppler-utils \
         tesseract-ocr \
         libleptonica-dev \
