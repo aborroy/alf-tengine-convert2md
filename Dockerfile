@@ -45,7 +45,8 @@ ENV EASY_OCR_MODEL_STORAGE=${HOME_DIR}/.EasyOCR
 
 WORKDIR /app
 COPY --from=build /workspace/target/*.jar /app/app.jar
-RUN chown -R ${USER_NAME}:${GROUP_NAME} /app ${HOME_DIR}
+RUN RAPIDOCR_DIR="$(python3 -c 'import os, rapidocr; print(os.path.dirname(rapidocr.__file__))')" && \
+    chown -R ${USER_NAME}:${GROUP_NAME} /app ${HOME_DIR} "${RAPIDOCR_DIR}"
 
 USER ${USER_NAME}
 
