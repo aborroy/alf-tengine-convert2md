@@ -9,7 +9,8 @@
     {
       "transformerName": "markdown",
       "supportedSourceAndTargetList": [
-        {"sourceMediaType": "application/pdf", "targetMediaType": "text/markdown"}
+        {"sourceMediaType": "application/pdf", "targetMediaType": "text/markdown"},
+        {"sourceMediaType": "application/pdf", "targetMediaType": "text/x-markdown"}
       ],
       "transformOptions": [ "languageOptions" ]
     }
