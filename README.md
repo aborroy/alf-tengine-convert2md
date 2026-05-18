@@ -7,13 +7,13 @@ AI‑powered Alfresco Transform Engine that converts PDF files to clean, richly�
 
 ## Features
 
-| Capability      | Details                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| PDF to Markdown | Extracts text and layout, turning each page into Markdown                                                                     |
-| Image captions  | Uses OCR **and** an LLaVA multimodal model (via [Ollama](https://ollama.ai)) to inject descriptive `![alt]` captions in‑line  |
-| Alfresco‑ready  | Implements the Alfresco Transform Core SPI (`TransformEngine` & `CustomTransformer`)                                          |
-| Containerised   | Multi‑stage Docker build (Java 17 + Python 3.11) with health‑check                                                            |
-| Configurable    | All knobs live in `application.yml` or environment variables                                                                  |
+| Capability      | Details                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| PDF to Markdown | Extracts text and layout, turning each page into Markdown                                                                                  |
+| Image captions  | Optionally uses OCR **and** an LLaVA multimodal model (via [Ollama](https://ollama.ai)) to inject descriptive captions in‑line             |
+| Alfresco‑ready  | Implements the Alfresco Transform Core SPI (`TransformEngine` & `CustomTransformer`)                                                       |
+| Containerised   | Multi‑stage Docker build (Java 17 + Python 3.11) with health‑check                                                                        |
+| Configurable    | All knobs live in `application.yml` or environment variables                                                                               |
 
 > Review also a similar project available in https://github.com/becpg/becpg-transform-markdown
 
@@ -23,9 +23,10 @@ AI‑powered Alfresco Transform Engine that converts PDF files to clean, richly�
 
 * Java 17 & Maven 3.9+ (for local builds)
 * Docker (for running the service)
-* An Ollama daemon exposing `llava` LLM on `http://localhost:11434`
+* An Ollama daemon exposing `llava` LLM on `http://localhost:11434` — **only required when using `image=described` mode**
 
 ```bash
+# Only needed for image=described
 ollama pull llava   # once
 ollama serve        # or `ollama run llava` in another shell
 ```
@@ -60,10 +61,10 @@ curl -X POST \
 
 Accepted values for `image` parameter:
 
-* `placeholder`: only the position of the image is marked in the output
-* `embedded`: the image is embedded as base64 encoded string
-* `referenced`: the image is exported in PNG format and referenced from the main exported document
-* `described`: the image description is embedded in the position of the image. This is not a native Docling option.
+* `placeholder`: only the position of the image is marked in the output *(default, no Ollama required)*
+* `embedded`: the image is embedded as base64 encoded string *(no Ollama required)*
+* `referenced`: the image is exported in PNG format and referenced from the main exported document *(no Ollama required)*
+* `described`: the image description is embedded in the position of the image — **requires Ollama with `llava`**. This is not a native Docling option.
 
 When using `described` for image mode, language for the descriptions can be specified as a `language` parameter:
 
@@ -80,20 +81,20 @@ curl -X POST \
 
 ```bash
 mvn clean package -DskipTests
-java -jar target/alf-tengine-convert2md-0.8.0.jar
+java -jar target/alf-tengine-convert2md-0.9.0.jar
 ```
 
 The app listens on `:8090` by default.
 
 ## Configuration
 
-| Property                                    | Default                  | Purpose                           |
-|---------------------------------------------|--------------------------|-----------------------------------|
-| `SPRING_AI_OLLAMA_BASE_URL`                 | `http://localhost:11434` | Endpoint for the Ollama REST API  |
-| `spring.servlet.multipart.max-file-size`    | `100MB`                  | Max upload size                   |
-| `spring.servlet.multipart.max-request-size` | `100MB`                  | Max request size                  |
-| `transform.image.default`                   | `placeholder`            | Default image mode embedding      |
-| `transform.language.default`                | `english`                | Default language for descriptions |
+| Property                                    | Default                  | Purpose                                                         |
+|---------------------------------------------|--------------------------|-----------------------------------------------------------------|
+| `SPRING_AI_OLLAMA_BASE_URL`                 | `http://localhost:11434` | Endpoint for the Ollama REST API — only used with `image=described` |
+| `spring.servlet.multipart.max-file-size`    | `100MB`                  | Max upload size                                                 |
+| `spring.servlet.multipart.max-request-size` | `100MB`                  | Max request size                                                |
+| `transform.image.default`                   | `placeholder`            | Default image mode embedding                                    |
+| `transform.language.default`                | `english`                | Default language for descriptions                               |
 
 Edit `src/main/resources/application.yml` or supply env vars/`‑D` flags.
 
@@ -124,6 +125,47 @@ docker build . -t alf-tengine-convert2md
 ```
 
 This will create a Docker image named `alf-tengine-convert2md:latest` in your local Docker repository
+
+## Deploying with Alfresco Community 26.1
+
+A ready‑to‑use compose file is provided at [`docker-compose-261.yaml`](docker-compose-261.yaml). It starts the full ACS 26.1 stack (repository, Share, PostgreSQL, ActiveMQ, Transform Router, Shared File Store, Transform Core AIO) together with the Markdown TEngine — **no Ollama required**.
+
+```bash
+docker compose -f docker-compose-261.yaml up --build -d
+```
+
+| URL | Service |
+|-----|---------|
+| http://localhost:8080/share | Alfresco Share |
+| http://localhost:8095/transform/config | Transform Router config — verify `markdown` engine is listed |
+| http://localhost:8161 | ActiveMQ web console |
+
+Startup takes approximately 3–5 minutes due to the service dependency chain. The Markdown TEngine registers itself with the Transform Router via:
+
+```yaml
+transform-router:
+  environment:
+    MARKDOWN_URL: http://transform-md:8090
+```
+
+To test the transformer from the command line once the stack is up:
+
+```bash
+curl -X POST \
+     -F "file=@/path/to/document.pdf" \
+     "http://localhost:8090/transform?sourceMimetype=application/pdf&targetMimetype=text/markdown" \
+     -o output.md
+```
+
+If you also want to use `image=described` mode, add the Ollama URL back to the `transform-md` service in `docker-compose-261.yaml`:
+
+```yaml
+transform-md:
+  environment:
+    - SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434
+```
+
+And ensure Ollama is running locally with the `llava` model pulled.
 
 ## Deploying with Alfresco Community 25.x
 
@@ -168,7 +210,7 @@ services:
     image: quay.io/alfresco/alfresco-transform-router:4.1.7
     environment:
       CORE_AIO_URL: "http://transform-core-aio:8090"
-      TRANSFORMER_URL_MD: "http://transform-md:8090"
+      MARKDOWN_URL: "http://transform-md:8090"
       TRANSFORMER_QUEUE_MD: "markdown-engine-queue"
 
   transform-md:
@@ -195,7 +237,7 @@ graph TD
     A[PDF File] -->|Multipart| B[MarkdownTransformer]
     B --> C[DoclingService]
     C -->|text| D[Markdown]
-    C -->|images| E(OCR + LLaVA)
+    C -->|image=described only| E(OCR + LLaVA via Ollama)
     E --> D
 ```
 
@@ -204,7 +246,7 @@ graph TD
 * `DoclingService`
 
     * Parses PDF with [Docling](https://pypi.org/project/docling/)
-    * Describes embedded images via Spring AI using Ollama `llava`
+    * Describes embedded images via Spring AI using Ollama `llava` — **only when `image=described` is requested**
 
 ---
 
