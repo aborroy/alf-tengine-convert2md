@@ -22,6 +22,7 @@ RUN apt-get update && \
         libtesseract-dev \
         libgl1 \
         libmagic1 \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Install docling and dependencies ---
